@@ -65,12 +65,35 @@ npm install
 Create a `.env.local` file in your project root:
 
 ```bash
+# Required - Supabase Database
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Optional - AI Question Generation (fallback questions used if not provided)
 GROQ_API_KEY=your_groq_api_key
+
+# Optional - Analytics
+NEXT_PUBLIC_GA_ID=your_google_analytics_id
 ```
 
-**Note:** The actual API keys will be provided separately for security reasons.
+### Getting API Keys:
+
+1. **Supabase** (Required):
+   - Go to [supabase.com](https://supabase.com)
+   - Create a new project
+   - Go to Settings > API
+   - Copy the Project URL and anon/public key
+
+2. **Groq AI** (Optional):
+   - Go to [console.groq.com](https://console.groq.com)
+   - Create an account and get your API key
+   - If not provided, the app will use sample questions
+
+3. **Google Analytics** (Optional):
+   - Create a GA4 property
+   - Get your Measurement ID (G-XXXXXXXXXX)
+
+**Note:** The app works without the Groq API key by using intelligent fallback questions.
 
 ### 3. Database Setup
 

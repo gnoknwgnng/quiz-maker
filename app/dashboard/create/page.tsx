@@ -49,8 +49,29 @@ export default function CreateQuizPage() {
       setQuestions(formattedQuestions)
       toast.success(`🎉 Generated ${generatedQuestions.length} questions successfully!`)
     } catch (error) {
-      toast.error('⚠️ Failed to generate questions. Using fallback questions instead.')
+      // If it's an API key error, show a different message
+      if (error instanceof Error && error.message.includes('API key')) {
+        toast.error('🔑 AI generation requires API key setup. Using sample questions for now.')
+      } else {
+        toast.error('⚠️ AI generation failed. Using sample questions instead.')
+      }
       console.error('Error generating questions:', error)
+      
+      // Still try to get fallback questions
+      try {
+        const { generateQuestions } = await import('@/lib/groq')
+        const fallbackQuestions = await generateQuestions(topic, difficulty, questionCount, selectedModel)
+        const formattedQuestions: QuestionForm[] = fallbackQuestions.map(q => ({
+          question_text: q.question,
+          question_type: q.type,
+          options: q.options || ['True', 'False'],
+          correct_answer: q.correct_answer
+        }))
+        setQuestions(formattedQuestions)
+        toast.success(`📝 Generated ${fallbackQuestions.length} sample questions for ${topic}!`)
+      } catch (fallbackError) {
+        console.error('Even fallback failed:', fallbackError)
+      }
     } finally {
       setGeneratingQuestions(false)
     }
