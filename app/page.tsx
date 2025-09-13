@@ -82,27 +82,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Stats section */}
-        <div className={`mt-20 text-center transition-all duration-1000 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
-            <div className="group">
-              <div className="text-3xl font-bold text-indigo-600 group-hover:scale-110 transition-transform duration-300">10K+</div>
-              <div className="text-gray-600">Quizzes Created</div>
-            </div>
-            <div className="group">
-              <div className="text-3xl font-bold text-green-600 group-hover:scale-110 transition-transform duration-300">50K+</div>
-              <div className="text-gray-600">Questions Generated</div>
-            </div>
-            <div className="group">
-              <div className="text-3xl font-bold text-purple-600 group-hover:scale-110 transition-transform duration-300">100K+</div>
-              <div className="text-gray-600">Participants</div>
-            </div>
-            <div className="group">
-              <div className="text-3xl font-bold text-yellow-600 group-hover:scale-110 transition-transform duration-300">99%</div>
-              <div className="text-gray-600">Satisfaction</div>
-            </div>
-          </div>
-        </div>
+
       </div>
     </div>
   )
