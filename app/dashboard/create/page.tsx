@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { generateQuestions } from '@/lib/groq'
+
 import { GROQ_MODELS } from '@/lib/types'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Wand2, Plus, Trash2 } from 'lucide-react'
@@ -37,9 +37,26 @@ export default function CreateQuizPage() {
     try {
       toast.loading('🤖 AI is generating your questions...', { duration: 2000 })
       
-      const generatedQuestions = await generateQuestions(topic, difficulty, questionCount, selectedModel)
+      const response = await fetch('/api/generate-questions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          topic: topic.trim(),
+          difficulty,
+          count: questionCount,
+          model: selectedModel
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate questions')
+      }
+
+      const data = await response.json()
       
-      const formattedQuestions: QuestionForm[] = generatedQuestions.map(q => ({
+      const formattedQuestions: QuestionForm[] = data.questions.map((q: any) => ({
         question_text: q.question,
         question_type: q.type,
         options: q.options || ['True', 'False'],
@@ -47,31 +64,20 @@ export default function CreateQuizPage() {
       }))
       
       setQuestions(formattedQuestions)
-      toast.success(`🎉 Generated ${generatedQuestions.length} questions successfully!`)
-    } catch (error) {
-      // If it's an API key error, show a different message
-      if (error instanceof Error && error.message.includes('API key')) {
-        toast.error('🔑 AI generation requires API key setup. Using sample questions for now.')
-      } else {
-        toast.error('⚠️ AI generation failed. Using sample questions instead.')
-      }
-      console.error('Error generating questions:', error)
       
-      // Still try to get fallback questions
-      try {
-        const { generateQuestions } = await import('@/lib/groq')
-        const fallbackQuestions = await generateQuestions(topic, difficulty, questionCount, selectedModel)
-        const formattedQuestions: QuestionForm[] = fallbackQuestions.map(q => ({
-          question_text: q.question,
-          question_type: q.type,
-          options: q.options || ['True', 'False'],
-          correct_answer: q.correct_answer
-        }))
-        setQuestions(formattedQuestions)
-        toast.success(`📝 Generated ${fallbackQuestions.length} sample questions for ${topic}!`)
-      } catch (fallbackError) {
-        console.error('Even fallback failed:', fallbackError)
+      // Show different success messages based on source
+      if (data.source === 'ai') {
+        toast.success(`🎉 Generated ${data.questions.length} AI questions successfully!`)
+      } else {
+        toast.success(`📝 Generated ${data.questions.length} sample questions for ${topic}!`)
+        toast('💡 Tip: Add GROQ_API_KEY to environment variables for AI-powered questions', {
+          duration: 4000,
+          icon: '💡'
+        })
       }
+    } catch (error) {
+      toast.error('⚠️ Failed to generate questions. Please try again.')
+      console.error('Error generating questions:', error)
     } finally {
       setGeneratingQuestions(false)
     }
