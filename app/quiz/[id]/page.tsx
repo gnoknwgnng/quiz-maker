@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Quiz, Question } from '@/lib/types'
 import toast from 'react-hot-toast'
-import { Clock, User, CheckCircle } from 'lucide-react'
+import { Clock, User, CheckCircle, AlertTriangle } from 'lucide-react'
+import { QuizTimer } from '@/components/QuizTimer'
 
 interface QuizPageProps {
   params: { id: string }
@@ -19,9 +20,11 @@ export default function QuizPage({ params }: QuizPageProps) {
   const [participant, setParticipant] = useState<any>(null)
   const [startTime, setStartTime] = useState<Date | null>(null)
   const [timeElapsed, setTimeElapsed] = useState(0)
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [quizCompleted, setQuizCompleted] = useState(false)
+  const [multiSelectAnswers, setMultiSelectAnswers] = useState<Record<string, string[]>>({})
   const router = useRouter()
 
   useEffect(() => {
@@ -69,6 +72,11 @@ export default function QuizPage({ params }: QuizPageProps) {
 
       setQuiz(quizData)
 
+      // Set timer if quiz has time limit
+      if (quizData.time_limit && quizData.time_limit > 0) {
+        setTimeRemaining(quizData.time_limit * 60) // Convert minutes to seconds
+      }
+
       // Fetch questions
       const { data: questionsData, error: questionsError } = await supabase
         .from('questions')
@@ -81,7 +89,14 @@ export default function QuizPage({ params }: QuizPageProps) {
         return
       }
 
-      setQuestions(questionsData || [])
+      let processedQuestions = questionsData || []
+      
+      // Shuffle questions if enabled
+      if (quizData.shuffle_questions) {
+        processedQuestions = [...processedQuestions].sort(() => Math.random() - 0.5)
+      }
+
+      setQuestions(processedQuestions)
       setStartTime(new Date())
     } catch (error) {
       toast.error('An error occurred while loading the quiz')
@@ -95,6 +110,30 @@ export default function QuizPage({ params }: QuizPageProps) {
       ...prev,
       [questionId]: answer
     }))
+  }
+
+  const handleMultiSelectAnswer = (questionId: string, option: string) => {
+    setMultiSelectAnswers(prev => {
+      const currentAnswers = prev[questionId] || []
+      const isSelected = currentAnswers.includes(option)
+      
+      if (isSelected) {
+        return {
+          ...prev,
+          [questionId]: currentAnswers.filter(a => a !== option)
+        }
+      } else {
+        return {
+          ...prev,
+          [questionId]: [...currentAnswers, option]
+        }
+      }
+    })
+  }
+
+  const handleTimeUp = () => {
+    toast.error('Time is up! Submitting quiz automatically.')
+    submitQuiz()
   }
 
   const nextQuestion = () => {
@@ -140,8 +179,21 @@ export default function QuizPage({ params }: QuizPageProps) {
       // Calculate score
       let correctAnswers = 0
       const answerRecords = questions.map(question => {
-        const selectedAnswer = answers[question.question_id] || ''
-        const isCorrect = selectedAnswer === question.correct_answer
+        let selectedAnswer = ''
+        let isCorrect = false
+
+        if (question.question_type === 'multi-select') {
+          const selectedOptions = multiSelectAnswers[question.question_id] || []
+          selectedAnswer = selectedOptions.join(', ')
+          // For multi-select, check if all correct answers are selected
+          const correctOptions = question.correct_answer?.split(', ') || []
+          isCorrect = correctOptions.length === selectedOptions.length && 
+                     correctOptions.every(option => selectedOptions.includes(option))
+        } else {
+          selectedAnswer = answers[question.question_id] || ''
+          isCorrect = selectedAnswer === question.correct_answer
+        }
+
         if (isCorrect) correctAnswers++
 
         return {
@@ -276,10 +328,17 @@ export default function QuizPage({ params }: QuizPageProps) {
                 <User className="w-4 h-4" />
                 <span className="text-sm">{participant?.name}</span>
               </div>
-              <div className="flex items-center space-x-2 text-gray-600">
-                <Clock className="w-4 h-4" />
-                <span className="text-sm font-mono">{formatTime(timeElapsed)}</span>
-              </div>
+              {timeRemaining !== null ? (
+                <QuizTimer 
+                  initialTime={timeRemaining} 
+                  onTimeUp={handleTimeUp}
+                />
+              ) : (
+                <div className="flex items-center space-x-2 text-gray-600">
+                  <Clock className="w-4 h-4" />
+                  <span className="text-sm font-mono">{formatTime(timeElapsed)}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -304,49 +363,137 @@ export default function QuizPage({ params }: QuizPageProps) {
 
         {/* Question */}
         <div className="card mb-8 animate-fadeInUp">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6 animate-slideInLeft">
-            {currentQuestion.question_text}
-          </h2>
+          <div className="flex items-start justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 animate-slideInLeft">
+              {currentQuestion.question_text}
+            </h2>
+            {currentQuestion.points && (
+              <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded">
+                {currentQuestion.points} pts
+              </span>
+            )}
+          </div>
+
+          {/* Image if present */}
+          {currentQuestion.image_url && (
+            <div className="mb-6">
+              <img 
+                src={currentQuestion.image_url} 
+                alt="Question image" 
+                className="max-w-full h-auto rounded-lg shadow-md"
+              />
+            </div>
+          )}
 
           <div className="space-y-3">
-            {currentQuestion.options?.map((option, index) => (
-              <label
-                key={index}
-                className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all duration-300 transform hover:scale-[1.02] hover:shadow-md ${
-                  answers[currentQuestion.question_id] === option
-                    ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md scale-[1.02]'
-                    : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                }`}
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <input
-                  type="radio"
-                  name={`question-${currentQuestion.question_id}`}
-                  value={option}
-                  checked={answers[currentQuestion.question_id] === option}
-                  onChange={() => handleAnswerSelect(currentQuestion.question_id, option)}
-                  className="sr-only"
-                />
-                <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center transition-all duration-300 ${
-                  answers[currentQuestion.question_id] === option
-                    ? 'border-blue-500 bg-blue-500 scale-110'
-                    : 'border-gray-300 hover:border-blue-400'
-                }`}>
+            {/* Multiple Choice / True-False */}
+            {(currentQuestion.question_type === 'multiple-choice' || currentQuestion.question_type === 'true-false') && 
+              currentQuestion.options?.map((option, index) => (
+                <label
+                  key={index}
+                  className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all duration-300 transform hover:scale-[1.02] hover:shadow-md ${
+                    answers[currentQuestion.question_id] === option
+                      ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md scale-[1.02]'
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                  }`}
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <input
+                    type="radio"
+                    name={`question-${currentQuestion.question_id}`}
+                    value={option}
+                    checked={answers[currentQuestion.question_id] === option}
+                    onChange={() => handleAnswerSelect(currentQuestion.question_id, option)}
+                    className="sr-only"
+                  />
+                  <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center transition-all duration-300 ${
+                    answers[currentQuestion.question_id] === option
+                      ? 'border-blue-500 bg-blue-500 scale-110'
+                      : 'border-gray-300 hover:border-blue-400'
+                  }`}>
+                    {answers[currentQuestion.question_id] === option && (
+                      <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+                    )}
+                  </div>
+                  <span className={`text-gray-900 transition-colors duration-300 ${
+                    answers[currentQuestion.question_id] === option ? 'font-semibold text-blue-900' : ''
+                  }`}>
+                    {option}
+                  </span>
                   {answers[currentQuestion.question_id] === option && (
-                    <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+                    <span className="ml-auto text-blue-500 animate-bounce">✓</span>
                   )}
-                </div>
-                <span className={`text-gray-900 transition-colors duration-300 ${
-                  answers[currentQuestion.question_id] === option ? 'font-semibold text-blue-900' : ''
-                }`}>
-                  {option}
-                </span>
-                {answers[currentQuestion.question_id] === option && (
-                  <span className="ml-auto text-blue-500 animate-bounce">✓</span>
-                )}
-              </label>
-            ))}
+                </label>
+              ))
+            }
+
+            {/* Multi-Select */}
+            {currentQuestion.question_type === 'multi-select' && 
+              currentQuestion.options?.map((option, index) => {
+                const isSelected = multiSelectAnswers[currentQuestion.question_id]?.includes(option) || false
+                return (
+                  <label
+                    key={index}
+                    className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all duration-300 transform hover:scale-[1.02] hover:shadow-md ${
+                      isSelected
+                        ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md scale-[1.02]'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                    }`}
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleMultiSelectAnswer(currentQuestion.question_id, option)}
+                      className="sr-only"
+                    />
+                    <div className={`w-5 h-5 rounded border-2 mr-4 flex items-center justify-center transition-all duration-300 ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-500 scale-110'
+                        : 'border-gray-300 hover:border-blue-400'
+                    }`}>
+                      {isSelected && (
+                        <span className="text-white text-xs animate-pulse">✓</span>
+                      )}
+                    </div>
+                    <span className={`text-gray-900 transition-colors duration-300 ${
+                      isSelected ? 'font-semibold text-blue-900' : ''
+                    }`}>
+                      {option}
+                    </span>
+                    {isSelected && (
+                      <span className="ml-auto text-blue-500 animate-bounce">✓</span>
+                    )}
+                  </label>
+                )
+              })
+            }
+
+            {/* Fill in the Blank */}
+            {currentQuestion.question_type === 'fill-blank' && (
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={answers[currentQuestion.question_id] || ''}
+                  onChange={(e) => handleAnswerSelect(currentQuestion.question_id, e.target.value)}
+                  placeholder="Type your answer here..."
+                  className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                />
+                <p className="text-sm text-gray-500">
+                  <AlertTriangle className="w-4 h-4 inline mr-1" />
+                  Please type your answer carefully. Spelling and capitalization matter.
+                </p>
+              </div>
+            )}
           </div>
+
+          {/* Multi-select instruction */}
+          {currentQuestion.question_type === 'multi-select' && (
+            <p className="mt-4 text-sm text-gray-500 flex items-center">
+              <AlertTriangle className="w-4 h-4 mr-1" />
+              Select all correct answers
+            </p>
+          )}
         </div>
 
         {/* Navigation */}
