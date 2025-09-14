@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Quiz, Question } from '@/lib/types'
 import toast from 'react-hot-toast'
 import { Clock, User, CheckCircle, AlertTriangle } from 'lucide-react'
-import { QuizTimer } from '@/components/QuizTimer'
+import QuizTimer from '@/components/QuizTimer'
 
 interface QuizPageProps {
   params: { id: string }
@@ -330,8 +330,9 @@ export default function QuizPage({ params }: QuizPageProps) {
               </div>
               {timeRemaining !== null ? (
                 <QuizTimer 
-                  initialTime={timeRemaining} 
+                  timeLimit={Math.ceil(timeRemaining / 60)} 
                   onTimeUp={handleTimeUp}
+                  isActive={!quizCompleted}
                 />
               ) : (
                 <div className="flex items-center space-x-2 text-gray-600">

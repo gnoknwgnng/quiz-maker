@@ -7,9 +7,9 @@ import { Quiz } from '@/lib/types'
 import toast from 'react-hot-toast'
 import { Plus, LogOut, Eye, Users, Clock, Tag } from 'lucide-react'
 import Link from 'next/link'
-import { ShareQuiz } from '@/components/ShareQuiz'
-import { CopyLinkButton } from '@/components/CopyLinkButton'
-import { QuizMetadata } from '@/components/QuizMetadata'
+import ShareQuiz from '@/components/ShareQuiz'
+import CopyLinkButton from '@/components/CopyLinkButton'
+import QuizMetadata from '@/components/QuizMetadata'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
@@ -126,7 +126,13 @@ export default function DashboardPage() {
                     )}
                     
                     {/* Quiz Metadata */}
-                    <QuizMetadata quiz={quiz} />
+                    <QuizMetadata 
+                      createdAt={quiz.created_at}
+                      category={quiz.category}
+                      tags={quiz.tags}
+                      difficulty={quiz.difficulty}
+                      questionCount={quiz.question_count || 0}
+                    />
                     
                     {/* Categories and Tags */}
                     <div className="flex flex-wrap gap-1 mt-2">
@@ -183,13 +189,14 @@ export default function DashboardPage() {
                   
                   <div className="flex items-center space-x-2">
                     <CopyLinkButton 
-                      link={`${window.location.origin}/quiz/${quiz.shareable_link}`}
-                      size="sm"
+                      url={`${window.location.origin}/quiz/${quiz.shareable_link}`}
+                      text="Copy"
+                      className="text-xs px-2 py-1"
                     />
                     <ShareQuiz 
+                      quizId={quiz.quiz_id}
                       quizTitle={quiz.title}
-                      quizLink={`${window.location.origin}/quiz/${quiz.shareable_link}`}
-                      size="sm"
+                      shareableLink={quiz.shareable_link}
                     />
                   </div>
                 </div>
