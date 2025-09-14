@@ -7,6 +7,13 @@ export interface Quiz {
   shareable_link: string
   expiry_date?: string
   created_at: string
+  description?: string
+  category?: string
+  tags?: string[]
+  time_limit?: number // in minutes, null for no limit
+  questions_per_page?: number
+  shuffle_questions?: boolean
+  show_results_immediately?: boolean
 }
 
 export interface Question {

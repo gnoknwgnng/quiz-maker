@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import { Toaster } from 'react-hot-toast'
 import { Suspense } from 'react'
 import Analytics from '@/components/Analytics'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import Script from 'next/script'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -27,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {GA_TRACKING_ID && (
           <>
@@ -52,14 +53,21 @@ export default function RootLayout({
           </>
         )}
       </head>
-      <body className={inter.className}>
-        <div className="min-h-screen bg-gray-50">
-          {children}
-        </div>
-        <Toaster position="top-right" />
-        <Suspense fallback={null}>
-          <Analytics />
-        </Suspense>
+      <body className={`${inter.className} bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300`}>
+        <ThemeProvider>
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+            {children}
+          </div>
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              className: 'dark:bg-gray-800 dark:text-white',
+            }}
+          />
+          <Suspense fallback={null}>
+            <Analytics />
+          </Suspense>
+        </ThemeProvider>
       </body>
     </html>
   )

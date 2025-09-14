@@ -18,14 +18,38 @@ interface QuestionForm {
 
 export default function CreateQuizPage() {
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [topic, setTopic] = useState('')
+  const [category, setCategory] = useState('')
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
+  const [timeLimit, setTimeLimit] = useState<number>(0) // 0 means no limit
+  const [shuffleQuestions, setShuffleQuestions] = useState(false)
+  const [showResultsImmediately, setShowResultsImmediately] = useState(true)
   const [selectedModel, setSelectedModel] = useState(GROQ_MODELS[0].id)
   const [questionCount, setQuestionCount] = useState(5)
   const [questions, setQuestions] = useState<QuestionForm[]>([])
   const [loading, setLoading] = useState(false)
   const [generatingQuestions, setGeneratingQuestions] = useState(false)
   const router = useRouter()
+
+  const categories = [
+    'Education', 'Science', 'Technology', 'History', 'Geography', 
+    'Literature', 'Mathematics', 'Sports', 'Entertainment', 'Business',
+    'Health', 'Art', 'Music', 'General Knowledge', 'Other'
+  ]
+
+  const addTag = () => {
+    if (tagInput.trim() && !tags.includes(tagInput.trim()) && tags.length < 5) {
+      setTags([...tags, tagInput.trim()])
+      setTagInput('')
+    }
+  }
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove))
+  }
 
   const generateAIQuestions = async () => {
     if (!topic.trim()) {
@@ -137,8 +161,14 @@ export default function CreateQuizPage() {
         .from('quizzes')
         .insert({
           title: title.trim(),
+          description: description.trim() || null,
           topic: topic.trim(),
+          category: category || null,
+          tags: tags.length > 0 ? tags : null,
           difficulty,
+          time_limit: timeLimit > 0 ? timeLimit : null,
+          shuffle_questions: shuffleQuestions,
+          show_results_immediately: showResultsImmediately,
           created_by: user.id,
           shareable_link: shareableLink
         })
@@ -208,44 +238,175 @@ export default function CreateQuizPage() {
               <span className="w-2 h-2 bg-blue-500 rounded-full mr-3 animate-pulse"></span>
               Quiz Details
             </h2>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-4">
+              {/* First row */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Quiz Title *
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Enter quiz title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Category
+                  </label>
+                  <select
+                    className="input-field"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                  >
+                    <option value="">Select category</option>
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Second row */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Quiz Title *
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description
                 </label>
-                <input
-                  type="text"
+                <textarea
                   className="input-field"
-                  placeholder="Enter quiz title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  rows={2}
+                  placeholder="Brief description of your quiz (optional)"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Topic *
-                </label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="e.g., JavaScript, History, Science"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                />
+
+              {/* Third row */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Topic *
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="e.g., JavaScript, History, Science"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Difficulty
+                  </label>
+                  <select
+                    className="input-field"
+                    value={difficulty}
+                    onChange={(e) => setDifficulty(e.target.value as 'easy' | 'medium' | 'hard')}
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </div>
               </div>
+
+              {/* Tags */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Difficulty
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Tags (max 5)
                 </label>
-                <select
-                  className="input-field"
-                  value={difficulty}
-                  onChange={(e) => setDifficulty(e.target.value as 'easy' | 'medium' | 'hard')}
-                >
-                  <option value="easy">Easy</option>
-                  <option value="medium">Medium</option>
-                  <option value="hard">Hard</option>
-                </select>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="ml-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className="input-field flex-1"
+                    placeholder="Add a tag and press Enter"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        addTag()
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={addTag}
+                    disabled={!tagInput.trim() || tags.length >= 5}
+                    className="btn-secondary px-4"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Quiz Settings */}
+              <div className="border-t pt-4">
+                <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-3">Quiz Settings</h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Time Limit (minutes)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="180"
+                      className="input-field"
+                      placeholder="0 = No limit"
+                      value={timeLimit || ''}
+                      onChange={(e) => setTimeLimit(parseInt(e.target.value) || 0)}
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Leave 0 for no time limit
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={shuffleQuestions}
+                        onChange={(e) => setShuffleQuestions(e.target.checked)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                        Shuffle questions for each participant
+                      </span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={showResultsImmediately}
+                        onChange={(e) => setShowResultsImmediately(e.target.checked)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                        Show results immediately after completion
+                      </span>
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
