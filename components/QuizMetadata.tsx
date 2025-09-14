@@ -8,7 +8,7 @@ interface QuizMetadataProps {
   category?: string
   tags?: string[]
   difficulty: string
-  questionCount: number
+  questionCount?: number
   className?: string
 }
 
@@ -63,10 +63,12 @@ export default function QuizMetadata({
       )}
 
       {/* Question Count */}
-      <div className="flex items-center space-x-1">
-        <User className="w-4 h-4" />
-        <span>{questionCount} questions</span>
-      </div>
+      {questionCount !== undefined && (
+        <div className="flex items-center space-x-1">
+          <User className="w-4 h-4" />
+          <span>{questionCount} questions</span>
+        </div>
+      )}
 
       {/* Difficulty */}
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(difficulty)}`}>

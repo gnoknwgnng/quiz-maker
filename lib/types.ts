@@ -20,9 +20,11 @@ export interface Question {
   question_id: string
   quiz_id: string
   question_text: string
-  question_type: 'multiple_choice' | 'true_false' | 'short_answer'
+  question_type: 'multiple_choice' | 'true_false' | 'short_answer' | 'fill_blank' | 'multi_select'
   options?: string[]
   correct_answer: string
+  image_url?: string
+  points?: number
 }
 
 export interface Participant {

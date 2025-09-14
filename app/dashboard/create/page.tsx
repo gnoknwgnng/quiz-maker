@@ -11,9 +11,11 @@ import Link from 'next/link'
 
 interface QuestionForm {
   question_text: string
-  question_type: 'multiple_choice' | 'true_false'
+  question_type: 'multiple_choice' | 'true_false' | 'fill_blank' | 'multi_select'
   options: string[]
-  correct_answer: string
+  correct_answer: string | string[]
+  image_url?: string
+  points?: number
 }
 
 export default function CreateQuizPage() {
@@ -135,7 +137,11 @@ export default function CreateQuizPage() {
     // Validate questions
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i]
-      if (!q.question_text.trim() || !q.correct_answer.trim()) {
+      const hasCorrectAnswer = Array.isArray(q.correct_answer) 
+        ? q.correct_answer.length > 0 
+        : q.correct_answer.trim()
+      
+      if (!q.question_text.trim() || !hasCorrectAnswer) {
         toast.error(`Question ${i + 1} is incomplete`)
         return
       }
@@ -186,7 +192,9 @@ export default function CreateQuizPage() {
         question_text: q.question_text.trim(),
         question_type: q.question_type,
         options: q.options.filter(opt => opt.trim()),
-        correct_answer: q.correct_answer.trim()
+        correct_answer: Array.isArray(q.correct_answer) 
+          ? q.correct_answer.join(', ') 
+          : q.correct_answer.trim()
       }))
 
       const { error: questionsError } = await supabase

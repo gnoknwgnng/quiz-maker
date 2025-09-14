@@ -182,7 +182,7 @@ export default function QuizPage({ params }: QuizPageProps) {
         let selectedAnswer = ''
         let isCorrect = false
 
-        if (question.question_type === 'multi-select') {
+        if (question.question_type === 'multi_select') {
           const selectedOptions = multiSelectAnswers[question.question_id] || []
           selectedAnswer = selectedOptions.join(', ')
           // For multi-select, check if all correct answers are selected
@@ -388,7 +388,7 @@ export default function QuizPage({ params }: QuizPageProps) {
 
           <div className="space-y-3">
             {/* Multiple Choice / True-False */}
-            {(currentQuestion.question_type === 'multiple-choice' || currentQuestion.question_type === 'true-false') && 
+            {(currentQuestion.question_type === 'multiple_choice' || currentQuestion.question_type === 'true_false') && 
               currentQuestion.options?.map((option, index) => (
                 <label
                   key={index}
@@ -429,7 +429,7 @@ export default function QuizPage({ params }: QuizPageProps) {
             }
 
             {/* Multi-Select */}
-            {currentQuestion.question_type === 'multi-select' && 
+            {currentQuestion.question_type === 'multi_select' && 
               currentQuestion.options?.map((option, index) => {
                 const isSelected = multiSelectAnswers[currentQuestion.question_id]?.includes(option) || false
                 return (
@@ -471,7 +471,7 @@ export default function QuizPage({ params }: QuizPageProps) {
             }
 
             {/* Fill in the Blank */}
-            {currentQuestion.question_type === 'fill-blank' && (
+            {currentQuestion.question_type === 'fill_blank' && (
               <div className="space-y-4">
                 <input
                   type="text"
@@ -489,7 +489,7 @@ export default function QuizPage({ params }: QuizPageProps) {
           </div>
 
           {/* Multi-select instruction */}
-          {currentQuestion.question_type === 'multi-select' && (
+          {currentQuestion.question_type === 'multi_select' && (
             <p className="mt-4 text-sm text-gray-500 flex items-center">
               <AlertTriangle className="w-4 h-4 mr-1" />
               Select all correct answers

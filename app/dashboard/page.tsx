@@ -131,7 +131,6 @@ export default function DashboardPage() {
                       category={quiz.category}
                       tags={quiz.tags}
                       difficulty={quiz.difficulty}
-                      questionCount={quiz.question_count || 0}
                     />
                     
                     {/* Categories and Tags */}
